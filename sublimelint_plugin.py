@@ -1,13 +1,23 @@
-import sublime, sublime_plugin
-import os, sys, glob
+import glob
+import os
+import sys
+import time
+import thread
+
+import sublime
+import sublime_plugin
 
 ## todo:
 # * fix lag (was partially caused by multiple worker threads - evaluate if it's still an issue)
 
-## language module loading
+## globals
 
-# mapping of language name to language module
-languages = {}
+languages = {} # mapping of language name to language module
+queue = {}     # views waiting to be processed by linter
+lineMessages = {} # error messages on given line obtained from linter
+
+drawType = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_OUTLINED
+
 
 # import config
 basepath = 'sublimelint/modules'
@@ -54,20 +64,14 @@ def reload_module(module):
 for modf in glob.glob('%s/*.py' % basepath):
 	base, name = os.path.split(modf)
 	name = name.split('.', 1)[0]
-	if name in ignore: continue
-
+	if name in ignore: 
+		continue
 	load_module(name)
 
-## bulk of the code
-
-# TODO: check to see if the types specified after drawType in the codestill work and replace as necessary
-drawType = 4 | 32 # from before ST2 had sublime.DRAW_*
-
-global lineMessages
-lineMessages = {}
 
 def run(module, view):
-	global lineMessages
+	'''run a linter on a given view'''
+
 	vid = view.id()
 
 	text = view.substr(sublime.Region(0, view.size()))
@@ -77,117 +81,86 @@ def run(module, view):
 	else:
 		filename = 'untitled'
 	
-	underline, lines, errorMessages, clearOutlines = module.run(text, view, filename)
-	lineMessages[vid] = errorMessages
+	underline, lines, lineMessages[vid], clear_outlines = module.run(text, view, filename)
 
-	view.erase_regions('lint-syntax')
-	view.erase_regions('lint-syntax-underline')
-	view.erase_regions('lint-underline')
+	erase_all_lint(view, clear_outlines)
 
-	if clearOutlines:
-		view.erase_regions('lint-outlines')
 	
 	if underline:
-		view.add_regions('lint-underline', underline, 'keyword', drawType)#sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_OUTLINED)
+		view.add_regions('lint-underline', underline, 'keyword', drawType)
 		
 	if lines:
 		outlines = [view.full_line(view.text_point(lineno, 0)) for lineno in lines]
-		view.add_regions('lint-outlines', outlines, 'keyword', drawType)#sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_OUTLINED)
-	
+		view.add_regions('lint-outlines', outlines, 'keyword', drawType)
 
-def validate(view):
+def erase_all_lint(view, clear_outlines):
+	'''erase all "lint" error marks from view'''
+	view.erase_regions('lint-underline')
+	if clear_outlines:
+		view.erase_regions('lint-outlines')
+
+def select_linter(view):
+	'''selects the appropriate linter to use based on language in current view'''
 	for language in languages:
 		if language in view.settings().get("syntax"):
-			run(languages[language], view)
-			break
+			return languages[language]
+	return None
 
-import time, thread
-global queue, lookup
-queue = {}
-lookup = {}
 
-def validate_runner(): # this threaded runner keeps it from slowing down UI while you type
-	global queue, lookup
+def queue_linter(view):
+	'''Put the current view in a queue to be examined by a linter
+	   if it exists'''
+	if select_linter(view) is None:
+		erase_all_lint(view, True)# may have changed file type and left marks behind
+		return
+	queue[view.id()] = view
+
+
+def background_linter():
+	'''An infinite loop meant to periodically
+	   update the view after running the linter in a background thread
+	   so as to not slow down the UI too much.'''
+
 	while True:
 		time.sleep(0.5)
 		for vid in dict(queue):
-			if queue[vid] == 0:
-				v = lookup[vid]
-				def _view():
+			_view = queue[vid]
+			def _update_view():
+				linter = select_linter(_view)
+				if linter is not None:
 					try:
-						validate(v)
+						run(linter, _view)
 					except RuntimeError, excp:
 						print excp
-				sublime.set_timeout(_view, 100)
-				try: del queue[vid]
-				except: pass
-				try: del lookup[vid]
-				except: pass
-			else:
-				queue[vid] = 0
+			sublime.set_timeout(_update_view, 100)
+			try: 
+				del queue[vid]
+			except: 
+				pass
 
-def validate_hit(view):
-	global lookup
-	global queue
 
-	for language in languages:
-		if language in view.settings().get("syntax"):
-			break
-	else:
-		view.erase_regions('lint-syntax')
-		view.erase_regions('lint-syntax-underline')
-		view.erase_regions('lint-underline')
-		view.erase_regions('lint-outlines')
-		return
+# only start the thread once - otherwise the plugin will get laggy 
+# when saving it often
+if not '__active_linter_thread' in globals():
+	__active_linter_thread = True
+	thread.start_new_thread(background_linter, ())
 
-	vid = view.id()
-	lookup[vid] = view
-	queue[vid] = 1
-
-# only start the thread once - otherwise the plugin will get laggy when saving it often
-if not 'already' in globals():
-	already = True
-	thread.start_new_thread(validate_runner, ())
-
-class pyflakes(sublime_plugin.EventListener):
-	def __init__(self, *args, **kwargs):
-		sublime_plugin.EventListener.__init__(self, *args, **kwargs)
-		self.lastCount = {}
+class Linter(sublime_plugin.EventListener):
 	
 	def on_modified(self, view):
-		validate_hit(view)
+		queue_linter(view)
 		return
-
-		# alternate method which works alright when we don't have threads/set_timeout
-		# from when I ported to early X beta :P
-		text = view.substr(sublime.Region(0, view.size()))
-		count = text.count('\n')
-		if count > 500: return
-		bid = view.buffer_id()
-
-		if bid in self.lastCount:
-			if self.lastCount[bid] != count:
-				validate(view)
-
-		self.lastCount[bid] = count
 	
 	def on_load(self, view):
-		validate(view)
+		queue_linter(view)
 	
 	def on_post_save(self, view):
-		# this will reload submodules if they are saved with sublime text
-		for name, module in languages.items():
-			if module.__file__ == view.file_name():
-				print 'Sublime Lint - Reloading language:', module.language
-				reload_module(module)
-				break
-
-		validate_hit(view)
+		queue_linter(view)
 	
 	def on_selection_modified(self, view):
 		vid = view.id()
 		lineno = view.rowcol(view.sel()[0].end())[0]
 		if vid in lineMessages and lineno in lineMessages[vid]:
-			view.set_status('pyflakes', '; '.join(lineMessages[vid][lineno]))
+			view.set_status('Linter', '; '.join(lineMessages[vid][lineno]))
 		else:
-			view.erase_status('pyflakes')
+			view.erase_status('Linter')
