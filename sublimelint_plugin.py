@@ -16,8 +16,6 @@ languages = {} # mapping of language name to language module
 queue = {}     # views waiting to be processed by linter
 lineMessages = {} # error messages on given line obtained from linter
 
-drawType = sublime.DRAW_EMPTY_AS_OVERWRITE | sublime.DRAW_OUTLINED
-
 
 # import config
 basepath = 'sublimelint/modules'
@@ -84,13 +82,12 @@ def run(module, view):
 
 	erase_all_lint(view)
 
-	
 	if underline:
-		view.add_regions('lint-underline', underline, 'keyword', drawType)
-		
+		view.add_regions('lint-underline', underline, 'keyword', sublime.DRAW_EMPTY_AS_OVERWRITE)
+
 	if lines:
 		outlines = [view.full_line(view.text_point(lineno, 0)) for lineno in lines]
-		view.add_regions('lint-outlines', outlines, 'keyword', drawType)
+		view.add_regions('lint-outlines', outlines, 'keyword', sublime.DRAW_OUTLINED)
 
 def erase_all_lint(view):
 	'''erase all "lint" error marks from view'''

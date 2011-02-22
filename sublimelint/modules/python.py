@@ -780,11 +780,11 @@ def run(code, view, filename='untitled'):
 	underline = []
 
 	def underlineRange(lineno, position, length=1):
-		# if not lineno in underline: underline[lineno] = {}
-		# position += full_line(text, lineno)[0]
-
-		# for i in xrange(length):
-		# 	underline[lineno][position + i]
+		# To underline a region, we use a "hack" specific to SublimeText
+		# where we create a list of empty regions for each character
+		# which we want to underline.  When drawing with
+		# sublime.DRAW_EMPTY_AS_OVERWRITE, such empty regions
+		# will appear as underlined.
 		
 		line = view.full_line(view.text_point(lineno, 0))
 		position += line.begin()
