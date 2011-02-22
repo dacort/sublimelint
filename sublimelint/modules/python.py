@@ -767,8 +767,7 @@ def run(code, view, filename='untitled'):
 	stripped_lines = []
 	good_lines = []
 	lines = code.split('\n')
-	for i in xrange(len(lines)):
-		line = lines[i]
+	for i, line in enumerate(lines):
 		if not line.strip() or line.strip().startswith('#'):
 			stripped_lines.append(i)
 		else:
@@ -849,14 +848,15 @@ def run(code, view, filename='untitled'):
 		addMessage(error.lineno, error)
 		if isinstance(error, OffsetError):
 			underlineRange(error.lineno, error.offset)
-			if len(errors) == 1 and False:
-				outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
-				return outlines, underline, errorMessages, False
+			# if len(errors) == 1 and False:
+			# 	outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
+			# 	return outlines, underline, errorMessages, False
 
 		elif isinstance(error, PythonError):
-			if len(errors) == 1 and False:
-				outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
-				return outlines, underline, errorMessages, False
+			# if len(errors) == 1 and False:
+			# 	outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
+			# 	return outlines, underline, errorMessages, False
+			underlineRange(error.lineno, error.offset) ## ?? is this the right thing to do??
 
 		elif isinstance(error, messages.UnusedImport):
 			underlineImport(error.lineno, error.name)
@@ -894,4 +894,4 @@ def run(code, view, filename='untitled'):
 		else:
 			print 'Oops, we missed an error type!'
 	
-	return underline, lines, errorMessages, True
+	return underline, lines, errorMessages

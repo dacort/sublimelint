@@ -68,7 +68,6 @@ for modf in glob.glob('%s/*.py' % basepath):
 		continue
 	load_module(name)
 
-
 def run(module, view):
 	'''run a linter on a given view'''
 
@@ -81,9 +80,9 @@ def run(module, view):
 	else:
 		filename = 'untitled'
 	
-	underline, lines, lineMessages[vid], clear_outlines = module.run(text, view, filename)
+	underline, lines, lineMessages[vid]= module.run(text, view, filename)
 
-	erase_all_lint(view, clear_outlines)
+	erase_all_lint(view)
 
 	
 	if underline:
@@ -93,11 +92,10 @@ def run(module, view):
 		outlines = [view.full_line(view.text_point(lineno, 0)) for lineno in lines]
 		view.add_regions('lint-outlines', outlines, 'keyword', drawType)
 
-def erase_all_lint(view, clear_outlines):
+def erase_all_lint(view):
 	'''erase all "lint" error marks from view'''
 	view.erase_regions('lint-underline')
-	if clear_outlines:
-		view.erase_regions('lint-outlines')
+	view.erase_regions('lint-outlines')
 
 def select_linter(view):
 	'''selects the appropriate linter to use based on language in current view'''
@@ -111,7 +109,7 @@ def queue_linter(view):
 	'''Put the current view in a queue to be examined by a linter
 	   if it exists'''
 	if select_linter(view) is None:
-		erase_all_lint(view, True)# may have changed file type and left marks behind
+		erase_all_lint(view)# may have changed file type and left marks behind
 		return
 	queue[view.id()] = view
 
@@ -127,7 +125,7 @@ def background_linter():
 			_view = queue[vid]
 			def _update_view():
 				linter = select_linter(_view)
-				if linter is not None:
+				if linter:
 					try:
 						run(linter, _view)
 					except RuntimeError, excp:
