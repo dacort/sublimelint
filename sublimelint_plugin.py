@@ -98,9 +98,9 @@ if not '__active_linter_thread' in globals():
 	__active_linter_thread = True
 	thread.start_new_thread(background_linter, ())
 
-# view.run_command("goto_line", {"line": 7})
 
 class RunLinter(sublime_plugin.TextCommand):
+	# sample: view.run_command("run_linter", "Python")
     def __init__(self, view):
         self.view = view
 
@@ -112,9 +112,9 @@ class RunLinter(sublime_plugin.TextCommand):
         else:
         	print "unrecognized linter: %s" % name
         self.view.settings().set('sublime_linter', saved_)
-        a = 3
 
 class ClearLintMarks(RunLinter):
+	# sample: view.run_command("clear_lint_marks")
 	def run_(self, arg):
 		erase_lint_marks(self.view)
 
