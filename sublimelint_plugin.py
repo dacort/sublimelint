@@ -1,85 +1,39 @@
-import glob
+'''This plugin controls a linter meant to work in the background
+and to provide information as a file is edited.
+
+It requires that the user setting "sublime_linter" be set to True
+to be activated.'''
+
 import os
-import sys
 import time
 import thread
 
 import sublime
 import sublime_plugin
 
+from sublimelint.loader import Loader
 ## todo:
 # * fix lag (was partially caused by multiple worker threads - evaluate if it's still an issue)
 
-## globals
-
-languages = {} # mapping of language name to language module
+linters = {} # mapping of language name to linter module
 queue = {}     # views waiting to be processed by linter
 lineMessages = {} # error messages on given line obtained from linter
 
-
-# import config
-basepath = 'sublimelint/modules'
-modpath = basepath.replace('/', '.')
-ignore = '__init__',
-basedir = os.getcwd()
-
-def load_module(name):
-	fullmod = '%s.%s' % (modpath, name)
-
-	# make sure the path didn't change on us (this is needed for submodule reload)
-	pushd = os.getcwd()
-	os.chdir(basedir)
-
-	__import__(fullmod)
-
-	# this following line does two things:
-	# first, we get the actual module from sys.modules, not the base mod returned by __import__
-	# second, we get an updated version with reload() so module development is easier
-	# (save sublimelint_plugin.py to make sublime text reload language submodules)
-	mod = sys.modules[fullmod] = reload(sys.modules[fullmod])
-
-	# update module's __file__ to absolute path so we can reload it if saved with sublime text
-	mod.__file__ = os.path.abspath(mod.__file__).rstrip('co')
-
-	try:
-		language = mod.language
-		languages[language] = mod
-	except AttributeError:
-		print 'SublimeLint: Error loading %s - no language specified' % modf
-	except:
-		print 'SublimeLint: General error importing %s' % modf
-	
-	os.chdir(pushd)
-
-def reload_module(module):
-	fullmod = module.__name__
-	if not fullmod.startswith(modpath):
-		return
-	
-	name = fullmod.replace(modpath+'.', '', 1)
-	load_module(name)
-
-for modf in glob.glob('%s/*.py' % basepath):
-	base, name = os.path.split(modf)
-	name = name.split('.', 1)[0]
-	if name in ignore: 
-		continue
-	load_module(name)
+mod_load = Loader(os.getcwd(), linters)
 
 def run(linter, view):
 	'''run a linter on a given view'''
+	if not view.settings().get('sublime_linter'):
+		return
 
 	vid = view.id()
-
 	text = view.substr(sublime.Region(0, view.size()))
-	
 	if view.file_name():
 		filename = os.path.split(view.file_name())[-1]
 	else:
 		filename = 'untitled'
 	
 	underline, lines, lineMessages[vid]= linter.run(text, view, filename)
-
 	erase_all_lint(view)
 
 	if underline:
@@ -89,16 +43,18 @@ def run(linter, view):
 		outlines = [view.full_line(view.text_point(lineno, 0)) for lineno in lines]
 		view.add_regions('lint-outlines', outlines, 'keyword', sublime.DRAW_OUTLINED)
 
+
 def erase_all_lint(view):
 	'''erase all "lint" error marks from view'''
 	view.erase_regions('lint-underline')
 	view.erase_regions('lint-outlines')
 
+
 def select_linter(view):
 	'''selects the appropriate linter to use based on language in current view'''
-	for language in languages:
+	for language in linters:
 		if language in view.settings().get("syntax"):
-			return languages[language]
+			return linters[language]
 	return None
 
 
@@ -115,7 +71,6 @@ def background_linter():
 	'''An infinite loop meant to periodically
 	   update the view after running the linter in a background thread
 	   so as to not slow down the UI too much.'''
-
 	while True:
 		time.sleep(0.5)
 		for vid in dict(queue):
@@ -140,8 +95,12 @@ if not '__active_linter_thread' in globals():
 	__active_linter_thread = True
 	thread.start_new_thread(background_linter, ())
 
-class Linter(sublime_plugin.EventListener):
-	
+class BackgroundLinter(sublime_plugin.EventListener):
+	'''This plugin controls a linter meant to work in the background
+	and to provide information as a file is edited.
+	For all practical purpose, it is possible to turn it off
+	via a user-defined settings.
+	'''
 	def on_modified(self, view):
 		queue_linter(view)
 		return
@@ -152,10 +111,10 @@ class Linter(sublime_plugin.EventListener):
 			run(linter, view)
 	
 	def on_post_save(self, view):
-		for name, module in languages.items():
+		for name, module in linters.items():
 			if module.__file__ == view.file_name():
 				print 'Sublime Lint - Reloading language:', module.language
-				reload_module(module)
+				mod_load.reload_module(module)
 				break
 		queue_linter(view)
 	
