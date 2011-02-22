@@ -22,10 +22,13 @@ lineMessages = {} # error messages on given line obtained from linter
 mod_load = Loader(os.getcwd(), linters)
 
 def run(linter, view):
-	'''run a linter on a given view'''
+	'''run a linter on a given view if settings is set appropriately'''
 	if not view.settings().get('sublime_linter'):
 		return
+	run_(linter, view)
 
+def run_(linter, view):
+	'''run a linter on a given view regardless of user setting'''
 	vid = view.id()
 	text = view.substr(sublime.Region(0, view.size()))
 	if view.file_name():
@@ -34,7 +37,7 @@ def run(linter, view):
 		filename = 'untitled'
 	
 	underline, lines, lineMessages[vid]= linter.run(text, view, filename)
-	erase_all_lint(view)
+	erase_lint_marks(view)
 
 	if underline:
 		view.add_regions('lint-underline', underline, 'keyword', sublime.DRAW_EMPTY_AS_OVERWRITE)
@@ -44,7 +47,7 @@ def run(linter, view):
 		view.add_regions('lint-outlines', outlines, 'keyword', sublime.DRAW_OUTLINED)
 
 
-def erase_all_lint(view):
+def erase_lint_marks(view):
 	'''erase all "lint" error marks from view'''
 	view.erase_regions('lint-underline')
 	view.erase_regions('lint-outlines')
@@ -62,7 +65,7 @@ def queue_linter(view):
 	'''Put the current view in a queue to be examined by a linter
 	   if it exists'''
 	if select_linter(view) is None:
-		erase_all_lint(view)# may have changed file type and left marks behind
+		erase_lint_marks(view)# may have changed file type and left marks behind
 		return
 	queue[view.id()] = view
 
@@ -94,6 +97,26 @@ def background_linter():
 if not '__active_linter_thread' in globals():
 	__active_linter_thread = True
 	thread.start_new_thread(background_linter, ())
+
+# view.run_command("goto_line", {"line": 7})
+
+class RunLinter(sublime_plugin.TextCommand):
+    def __init__(self, view):
+        self.view = view
+
+    def run_(self, name):
+        saved_ = self.view.settings().get('sublime_linter')
+        self.view.settings().set('sublime_linter', False)
+        if name in linters:
+        	run_(linters[name], self.view)
+        else:
+        	print "unrecognized linter: %s" % name
+        self.view.settings().set('sublime_linter', saved_)
+        a = 3
+
+class ClearLintMarks(RunLinter):
+	def run_(self, arg):
+		erase_lint_marks(self.view)
 
 class BackgroundLinter(sublime_plugin.EventListener):
 	'''This plugin controls a linter meant to work in the background
