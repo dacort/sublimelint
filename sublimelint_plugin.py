@@ -5,7 +5,6 @@ It requires that the user setting "sublime_linter" be set to True
 to be activated - or, alternatively, that the user runs the command
 "linter_on" via view.run_command("linter_on")
 '''
-
 import os
 import time
 import thread
@@ -34,7 +33,7 @@ def run_(linter, view):
 	vid = view.id()
 	text = view.substr(sublime.Region(0, view.size()))
 	if view.file_name():
-		filename = os.path.split(view.file_name())[-1]
+		filename = view.file_name() # os.path.split(view.file_name())[-1]
 	else:
 		filename = 'untitled'
 	
@@ -114,12 +113,13 @@ class RunLinter(sublime_plugin.TextCommand):
         	run_(linters[name], self.view)
         else:
         	print "unrecognized linter: %s" % name
+        dummy = 2
 
 
 class ResetLinter(RunLinter):
 	'''removes existing lint marks and restore (if needed) the
 	settings so that the relevant "background" linter can run'''
-	# sample: view.reset_linter("clear_lint_marks")
+	# sample: view.run_command("reset_linter")
 	def run_(self, arg):
 		erase_lint_marks(self.view)
 		if self.view.settings().get('sublime_linter') is None:
@@ -128,14 +128,14 @@ class ResetLinter(RunLinter):
 
 class LinterOn(RunLinter):
 	'''Turn background linter on'''
-	# sample: view.reset_linter("linter_on")
+	# sample: view.run_command("linter_on")
 	def run_(self, arg):
 		self.view.settings().set('sublime_linter', True)
 
 
 class LinterOff(RunLinter):
 	'''Turn background linter off'''
-	# sample: view.reset_linter("linter_off")
+	# sample: view.run_command("linter_off")
 	def run_(self, arg):
 		self.view.settings().set('sublime_linter', False)
 
