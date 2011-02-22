@@ -66,7 +66,7 @@ for modf in glob.glob('%s/*.py' % basepath):
 		continue
 	load_module(name)
 
-def run(module, view):
+def run(linter, view):
 	'''run a linter on a given view'''
 
 	vid = view.id()
@@ -78,7 +78,7 @@ def run(module, view):
 	else:
 		filename = 'untitled'
 	
-	underline, lines, lineMessages[vid]= module.run(text, view, filename)
+	underline, lines, lineMessages[vid]= linter.run(text, view, filename)
 
 	erase_all_lint(view)
 
@@ -147,9 +147,16 @@ class Linter(sublime_plugin.EventListener):
 		return
 	
 	def on_load(self, view):
-		queue_linter(view)
+		linter = select_linter(view)
+		if linter:
+			run(linter, view)
 	
 	def on_post_save(self, view):
+		for name, module in languages.items():
+			if module.__file__ == view.file_name():
+				print 'Sublime Lint - Reloading language:', module.language
+				reload_module(module)
+				break
 		queue_linter(view)
 	
 	def on_selection_modified(self, view):
