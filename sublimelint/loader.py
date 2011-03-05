@@ -6,7 +6,7 @@ import os
 import sys
 
 class Loader(object):
-    '''utility class to load (and reload if necessary) linter modules'''
+    '''utility class to load (and reload if necessary) sublimelint modules'''
     def __init__(self, basedir, linters):
         '''assign relevant variables and load all existing linter modules'''
         self.basedir = basedir
@@ -49,7 +49,7 @@ class Loader(object):
             self.linters[language] = mod
             print 'SublimeLint: Successfully loaded linter %s' % name
         except AttributeError:
-            print 'SublimeLint: Error loading %s - no language specified' % name
+            print 'SublimeLint: Loaded %s - no language specified' % name
         except:
             print 'SublimeLint: General error importing %s' % name
 

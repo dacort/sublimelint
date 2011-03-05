@@ -4,7 +4,6 @@ pylint is not available as a checker that runs in the background
 as it generally takes much too long.
 '''
 
-#import subprocess, os
 from StringIO import StringIO
 import tempfile
 try:
@@ -15,6 +14,8 @@ except ImportError:
 	print "pylint is not available"
 	PYLINT_AVAILABLE = False
 
+__all__ = ['run', 'language']
+language = 'pylint'
 
 def run_pylint(code):
    	'''runs pylint on the code using a temporary file for storage'''
@@ -24,7 +25,7 @@ def run_pylint(code):
 	linter.load_command_line_configuration([
 		'--module-rgx=.*',  # don't check the module name
 		'--reports=n',      # remove tables
-		'--persistent=n',   # don't save the old score (no sens for temp)
+		'--persistent=n',   # don't save the old score (no sense for temp)
 	])
 
 	temp = tempfile.NamedTemporaryFile(suffix = '.py')
@@ -41,9 +42,6 @@ def run_pylint(code):
 
 	return _report
 
-# start sublimelint pylint plugin
-__all__ = ['run', 'language']
-language = 'pylint'  #
 
 def remove_unwanted(errors):
 	'''remove unwanted warnings'''
@@ -77,7 +75,7 @@ def run(code, *dummy):
 		try:
 			lineno = info[1]
 		except IndexError:
-			print "info=", info
+			print info
 		message = ":".join(info[2:])
 		lineno = int(lineno) - 1
 		lines.add(lineno)
