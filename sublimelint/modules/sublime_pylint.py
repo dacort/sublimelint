@@ -74,7 +74,10 @@ def run(code, *dummy):
 	
 	for line in errors.splitlines():
 		info = line.split(":")
-		lineno = info[1]
+		try:
+			lineno = info[1]
+		except IndexError:
+			print "info=", info
 		message = ":".join(info[2:])
 		lineno = int(lineno) - 1
 		lines.add(lineno)
