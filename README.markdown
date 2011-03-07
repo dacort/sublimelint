@@ -25,7 +25,6 @@ The "User" packages directory is located at:
 * Linux:
     ~/.Sublime Text 2/Packages/User/
 
-
 Using
 -----
 

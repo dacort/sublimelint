@@ -36,31 +36,38 @@ class Loader(object):
 
         __import__(fullmod)
 
-        # this following line does two things:
-        # first, we get the actual module from sys.modules, not the base mod returned by __import__
-        # second, we get an updated version with reload() so module development is easier
-        # (save sublimelint_plugin.py to make sublime text reload language submodules)
+        # this following line of code does two things:
+        # first, we get the actual module from sys.modules, 
+        #    not the base mod returned by __import__
+        # second, we get an updated version with reload() 
+        #    so module development is easier
+        # (to make sublime text reload language submodule,
+        #  just save sublimelint_plugin.py )
         mod = sys.modules[fullmod] = reload(sys.modules[fullmod])
 
-        # update module's __file__ to absolute path so we can reload it if saved with sublime text
+        # update module's __file__ to absolute path so we can reload it 
+        # if saved with sublime text
         mod.__file__ = os.path.abspath(mod.__file__).rstrip('co')
 
+        no_error = True
         try:
             language = mod.language
             self.linters[language] = mod
             print 'SublimeLint: Successfully loaded linter %s' % name
         except AttributeError:
             print 'SublimeLint: Loaded %s - no language specified' % name
+            no_error = False
         except:
             print 'SublimeLint: General error importing %s' % name
+            no_error = False
 
-        try:
-            self.descriptions.append(mod.description)
-            print 'SublimeLint: Successfully loaded linter %s' % name
-        except AttributeError:
-            print 'SublimeLint: no description present for %s' % name
-        except:
-            print 'SublimeLint: General error in looking for description of %s' % name
+        if no_error:
+            try:
+                self.descriptions.append(mod.description)
+            except AttributeError:
+                print 'SublimeLint: no description present for %s' % name
+            except:
+                print 'SublimeLint: error seeking description of %s' % name
         
         os.chdir(pushd)
 

@@ -38,6 +38,9 @@ lines of code which are deemed to contain (potential) errors. It also
 supports highlighting special user notes (for example: TODO) so that they
 can be quickly located.
 
+To enable a background linter to run by default 
+(provided one exists for the language/syntax the file being viewed), set
+the user preference "sublimelint" to true.
 
 The following information is extracted dynamically from the source
 code files and *should* be reflecting accurately all the available
@@ -146,31 +149,49 @@ if not '__active_linter_thread' in globals():
     __active_linter_thread = True
     thread.start_new_thread(background_linter, ())
 
+
+UNRECOGNIZED = '''
+* Unrecognized option * :  %s
+==============================================
+
+'''
+
 class Lint(sublime_plugin.TextCommand):
     '''command to interact with linters'''
+
+    def __init__(self, view):
+        self.view = view
+        self.help_called = False
+
     def run_(self, name):
         '''method called by default via view.run_command; 
            used to dispatch to appropriate method'''
         if name is None:
             self.help_()
+            return
+
         try:
-            name = name.lower()
+            lc_name = name.lower()
         except AttributeError:
-            HELP.insert(0, "unrecognized option %s" % name)
+            HELP.insert(0, UNRECOGNIZED % name)
             self.help()
             del HELP[0]
+            return
 
-        if name == "help":
+        if lc_name == "help":
             self.help()
-        elif name == "reset":
+        elif lc_name == "reset":
             self.reset()
-        elif name == "on":
+        elif lc_name == "on":
             self.on()
-        elif name == "off":
+        elif lc_name == "off":
             self.off()
+        elif name in LINTERS:
+            self._run(name)
         else:
-            print "Unrecognized option %s" % name
-
+            HELP.insert(0, UNRECOGNIZED % name)
+            self.help()
+            del HELP[0]
 
     @help_collector
     def help_(self):
@@ -194,6 +215,7 @@ class Lint(sublime_plugin.TextCommand):
         help_view.insert(ed, 0, '\n'.join(HELP))
         help_view.end_edit(ed)
         help_view.set_read_only(_id)
+
     
     @help_collector
     def reset(self):
@@ -219,17 +241,12 @@ class Lint(sublime_plugin.TextCommand):
         '''
         self.view.settings().set('sublimelint', False)
 
-
-class RunLinter(sublime_plugin.TextCommand):
-    '''command to run a user-specified linter
-    example: view.run_command("run_linter", "Python")'''
-    def run_(self, name):
+    def _run(self, name):
+        '''runs an existing linter'''
         if self.view.settings().get('sublimelint'):
             self.view.settings().set('sublimelint', None)
-        if name in LINTERS:
-            run_lint(LINTERS[name], self.view)
-        else:
-            print "unrecognized linter: %s" % name
+        run_lint(LINTERS[name], self.view)
+
 
 
 class BackgroundLinter(sublime_plugin.EventListener):
