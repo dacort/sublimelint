@@ -42,10 +42,24 @@ down the UI too much, you can unset this user preference (or set it to
 false) and use the special commands (described below) to run it only
 on demand.
 
+When an "error" is highlighted by the linter, putting the cursor on the
+offending line will result in the error message being displayed on the
+status bar.
+
+
+Color: lint "errors"
+--------------------
+
+The color used to outline lint errors is the invalid.illegal scope
+which should normally be defined in your default theme.
+
 
 Color: user notes
 ------------------
 
+The color used to outline lint errors is the invalid.illegal scope which
+should not exist by default in your default theme; however, it should
+still be visible due to the way Sublime Text displays non defined scopes.
 To customize the color used for highlighting user notes, add the following
 to your theme (adapting the color to your liking):
         <dict>
@@ -60,11 +74,7 @@ to your theme (adapting the color to your liking):
             </dict>
         </dict>
 
-Color: lint "errors"
---------------------
 
-The color used to outline lint errors is the invalid.illegal scope
-which should normally be defined in your default theme.
 
 ==================================================================
 
