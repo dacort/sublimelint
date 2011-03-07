@@ -28,11 +28,6 @@ def run(code, view):
         regions.extend(find_all(code, note, view))
     return regions
 
-    '''
-    TODO: use view.scope_name and see that it is inside a comment (hash or string...)
-
-    '''
-
 def find_all(text, string, view):
     ''' finds all occurences of "string" in "text" and notes their positions
        as a sublime Region

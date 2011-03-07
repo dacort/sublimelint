@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 # python.py - Lint checking for Python - given filename and contents of the code:
 # It provides a list of line numbers to outline and offsets to highlight.
 #
 # This specific module is a derivative of PyFlakes and part of the SublimeLint project.
-# SublimeLint is (c) 2011 Ryan Hileman and licensed under the MIT license.
+# It is a fork by André Roberge from the original SublimeLint project, 
+# (c) 2011 Ryan Hileman and licensed under the MIT license.
 # URL: http://bochs.info/
 #
 # The original copyright notices for this file/project follows:
@@ -34,7 +36,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-# todo:
+# TODO:
 # * fix regex for variable names inside strings (quotes)
 
 import sublime
@@ -852,50 +854,29 @@ def run(code, view, filename='untitled'):
 		
 		lines.add(error.lineno)
 		addMessage(error.lineno, error)
-		if isinstance(error, OffsetError):
+		if isinstance(error, (OffsetError, PythonError)):
 			underlineRange(error.lineno, error.offset)
-			# if len(errors) == 1 and False:
-			# 	outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
-			# 	return outlines, underline, errorMessages, False
 
-		elif isinstance(error, PythonError):
-			# if len(errors) == 1 and False:
-			# 	outlines = [view.full_line(view.text_point(error.lineno, 0)) for lineno in lines]
-			# 	return outlines, underline, errorMessages, False
-			underlineRange(error.lineno, error.offset) ## ?? is this the right thing to do??
-
-		elif isinstance(error, messages.UnusedImport):
-			underlineImport(error.lineno, error.name)
-		
-		elif isinstance(error, messages.RedefinedWhileUnused):
+		elif isinstance(error, (messages.RedefinedWhileUnused,
+								messages.UndefinedName,
+								messages.UndefinedExport,
+								messages.UndefinedLocal,
+								messages.RedefinedFunction,
+								messages.UnusedVariable)):
 			underlineWord(error.lineno, error.name)
 
 		elif isinstance(error, messages.ImportShadowedByLoopVar):
 			underlineForVar(error.lineno, error.name)
 
-		elif isinstance(error, messages.ImportStarUsed):
+		elif isinstance(error, (messages.UnusedImport, 
+								messages.ImportStarUsed)):
 			underlineImport(error.lineno, '\*')
-
-		elif isinstance(error, messages.UndefinedName):
-			underlineWord(error.lineno, error.name)
-
-		elif isinstance(error, messages.UndefinedExport):
-			underlineWord(error.lineno, error.name)
-
-		elif isinstance(error, messages.UndefinedLocal):
-			underlineWord(error.lineno, error.name)
 
 		elif isinstance(error, messages.DuplicateArgument):
 			underlineDuplicateArgument(error.lineno, error.name)
 
-		elif isinstance(error, messages.RedefinedFunction):
-			underlineWord(error.lineno, error.name)
-
 		elif isinstance(error, messages.LateFutureImport):
 			pass
-
-		elif isinstance(error, messages.UnusedVariable):
-			underlineWord(error.lineno, error.name)
 
 		else:
 			print 'Oops, we missed an error type!'

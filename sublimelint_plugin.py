@@ -24,8 +24,6 @@ HELP = []   # collects all "help" (docstring, etc.) information
 MOD_LOAD = Loader(os.getcwd(), LINTERS, HELP) # utility to load (and reload 
             # if necessary) linter modules [useful when working on plugin]
 
-#TODO
-
 HELP.insert(0, 
 '''SublimeLint help
 =================
