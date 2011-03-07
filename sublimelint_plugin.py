@@ -20,7 +20,8 @@ LINTERS = {} # mapping of language name to linter module
 QUEUE = {}     # views waiting to be processed by linter
 ERRORS = {} # error messages on given line obtained from linter; they are
             # displayed in the status bar when cursor is on line with error
-MOD_LOAD = Loader(os.getcwd(), LINTERS) # utility to load (and reload 
+HELP = []   # collects all "help" (docstring, etc.) information
+MOD_LOAD = Loader(os.getcwd(), LINTERS, HELP) # utility to load (and reload 
             # if necessary) linter modules [useful when working on plugin]
 INTERVAL = 0.5 # time interval between background runs
 
@@ -28,7 +29,7 @@ INTERVAL = 0.5 # time interval between background runs
 #TODO add info about theme
 
 
-HELP = [\
+HELP.insert(0, 
 '''SublimeLint help
 =================
 
@@ -43,7 +44,8 @@ code files and *should* be reflecting accurately all the available
 options:
 ------------------------------------------------------------------
 '''
-]
+)
+
 def help_collector(fn):
     '''decorator used to automatically extract docstrings and collect them
     for future display'''
@@ -154,25 +156,33 @@ class Lint(sublime_plugin.TextCommand):
         try:
             name = name.lower()
         except AttributeError:
-            self.multiple_args(name)
+            HELP.insert(0, "unrecognized option %s" % name)
+            self.help()
+            del HELP[0]
 
         if name == "help":
             self.help()
+        elif name == "reset":
+            self.reset()
+        elif name == "on":
+            self.on()
+        elif name == "off":
+            self.off()
         else:
-            print "Unrecognized option"
+            print "Unrecognized option %s" % name
 
 
     @help_collector
     def help_(self):
         '''* view.run_command("lint"):
-           Displays information about how to use this plugin
+        Displays information about how to use this plugin
         '''
         self.help()
 
     @help_collector
     def help(self):
         '''* view.run_command("lint", "help"):
-           Displays information about how to use this plugin
+        Displays information about how to use this plugin
         '''
         help_view = self.view.window().new_file()
         help_view.set_name("SublimeLint help")
@@ -184,6 +194,31 @@ class Lint(sublime_plugin.TextCommand):
         help_view.insert(ed, 0, '\n'.join(HELP))
         help_view.end_edit(ed)
         help_view.set_read_only(_id)
+    
+    @help_collector
+    def reset(self):
+        '''* view.run_command("lint", "reset")
+        Removes existing lint marks and restore (if needed) the settings
+        so that the relevant "background" linter can run.
+        '''
+        erase_lint_marks(self.view)
+        if self.view.settings().get('sublimelint') is None:
+            self.view.settings().set('sublimelint', True)
+
+    @help_collector
+    def on(self):
+        '''* view.run_command("lint", "on")
+        Turns background linter on.
+        '''
+        self.view.settings().set('sublimelint', True)
+
+    @help_collector
+    def off(self):
+        '''* view.run_command("lint", "off")
+        Turns background linter off.
+        '''
+        self.view.settings().set('sublimelint', False)
+
 
 class RunLinter(sublime_plugin.TextCommand):
     '''command to run a user-specified linter
@@ -195,31 +230,6 @@ class RunLinter(sublime_plugin.TextCommand):
             run_lint(LINTERS[name], self.view)
         else:
             print "unrecognized linter: %s" % name
-
-
-class ResetLinter(sublime_plugin.TextCommand):
-    '''removes existing lint marks and restore (if needed) the
-    settings so that the relevant "background" linter can run
-    example: view.run_command("reset_linter")'''
-    def run_(self, arg):
-        erase_lint_marks(self.view)
-        if self.view.settings().get('sublimelint') is None:
-            self.view.settings().set('sublimelint', True)
-
-
-class LinterOn(sublime_plugin.TextCommand):
-    '''Turn background linter on
-    example: view.run_command("linter_on")'''
-    def run_(self, arg):
-        self.view.settings().set('sublimelint', True)
-        print arg
-
-
-class LinterOff(sublime_plugin.TextCommand):
-    '''Turn background linter off
-    example: view.run_command("linter_off")'''
-    def run_(self, arg):
-        self.view.settings().set('sublimelint', False)
 
 
 class BackgroundLinter(sublime_plugin.EventListener):

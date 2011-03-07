@@ -14,8 +14,11 @@ except ImportError:
 	print "pylint is not available"
 	PYLINT_AVAILABLE = False
 
-__all__ = ['run', 'language']
 language = 'pylint'
+description =\
+'''* view.run_command("lint", "pylint")
+        Turns background linter off and runs pylint on current view.
+'''
 
 def run_pylint(code):
    	'''runs pylint on the code using a temporary file for storage'''

@@ -760,8 +760,14 @@ def check(codeString, filename):
 # start sublimelint python plugin
 
 import sys, re
-__all__ = ['run', 'language']
+
 language = 'Python'
+description =\
+'''* view.run_command("lint", "Python")
+        Turns background linter off and runs the default Python linter 
+        (pyflakes) on current view.
+'''
+
 
 def run(code, view, filename='untitled'):
 	stripped_lines = []

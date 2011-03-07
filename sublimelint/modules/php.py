@@ -21,6 +21,11 @@ def check(codeString, filename):
 import re
 __all__ = ['run', 'language']
 language = 'PHP'
+description =\
+'''* view.run_command("lint", "PHP")
+        Turns background linter off and runs the default PHP linter
+        (php - l, assumed to be on $PATH) on current view.
+'''
 
 def run(code, view, filename='untitled'):
 	errors = check(code, filename)

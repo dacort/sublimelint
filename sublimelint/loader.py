@@ -7,13 +7,14 @@ import sys
 
 class Loader(object):
     '''utility class to load (and reload if necessary) sublimelint modules'''
-    def __init__(self, basedir, linters):
+    def __init__(self, basedir, linters, descriptions):
         '''assign relevant variables and load all existing linter modules'''
         self.basedir = basedir
         self.basepath = 'sublimelint/modules'
         self.linters = linters
         self.modpath = self.basepath.replace('/', '.')
         self.ignore = '__init__',   # <- tuple!
+        self.descriptions = descriptions
         self.load_all()
 
     def load_all(self):
@@ -53,6 +54,13 @@ class Loader(object):
         except:
             print 'SublimeLint: General error importing %s' % name
 
+        try:
+            self.descriptions.append(mod.description)
+            print 'SublimeLint: Successfully loaded linter %s' % name
+        except AttributeError:
+            print 'SublimeLint: no description present for %s' % name
+        except:
+            print 'SublimeLint: General error in looking for description of %s' % name
         
         os.chdir(pushd)
 
