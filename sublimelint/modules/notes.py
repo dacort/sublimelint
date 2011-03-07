@@ -25,15 +25,15 @@ def run(code, view):
     
     regions = []
     for note in my_notes:
-        regions.extend(find_all(code, note))
+        regions.extend(find_all(code, note, view))
     return regions
 
     '''
-    use view.scope_name and see that it is inside a comment (hash or string...)
+    TODO: use view.scope_name and see that it is inside a comment (hash or string...)
 
     '''
 
-def find_all(text, string):
+def find_all(text, string, view):
     ''' finds all occurences of "string" in "text" and notes their positions
        as a sublime Region
        '''
@@ -43,9 +43,12 @@ def find_all(text, string):
     while True:
         start = text.find(string, start)
         if start != -1:
-            begin = start
+            name = view.scope_name(start)
             end = start + length
-            found.append( sublime.Region(begin, end) )
+            # Try to only include item in comments - including strings (Python)
+            if ((name.startswith("string") and "meta" not in name) 
+                or name.startswith("comment")):
+                found.append( sublime.Region(start, end) )
             start = end
         else:
             break
