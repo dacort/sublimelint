@@ -1,9 +1,9 @@
 '''This plugin controls a linter meant to work in the background
 and to provide information as a file is edited.
 
-It requires that the user setting "sublimelint" be set to True
+It requires that the user setting "sublimelint" be set to true
 to be activated - or, alternatively, that the user runs the command
-"linter_on" via view.run_command("linter_on")
+view.run_command("lint", "on")
 
 Questions: andre.roberge (at) gmail.com
 '''
