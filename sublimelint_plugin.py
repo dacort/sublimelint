@@ -22,13 +22,43 @@ ERRORS = {} # error messages on given line obtained from linter; they are
             # displayed in the status bar when cursor is on line with error
 MOD_LOAD = Loader(os.getcwd(), LINTERS) # utility to load (and reload 
             # if necessary) linter modules [useful when working on plugin]
+INTERVAL = 0.5 # time interval between background runs
+
+#TODO have interval set via user preference
+#TODO add info about theme
+
+
+HELP = [\
+'''SublimeLint help
+=================
+
+SublimeLint is a plugin intended to support "lint" programs, highlighting
+lines of code which are deemed to contain (potential) errors. It also
+supports highlighting special user notes (for example: TODO) so that they
+can be quickly located.
+
+
+The following information is extracted dynamically from the source
+code files and *should* be reflecting accurately all the available
+options:
+------------------------------------------------------------------
+'''
+]
+def help_collector(fn):
+    '''decorator used to automatically extract docstrings and collect them
+    for future display'''
+    HELP.append(fn.__doc__)
+    return fn
 
 def run(linter, view):
     '''run a linter on a given view if settings is set appropriately'''
     if view.settings().get('sublimelint'):
-        run_(linter, view)
+        if linter:
+            run_lint(linter, view)
+    if view.settings().get('sublimelint.notes'):
+        highlight_notes(view)
 
-def run_(linter, view):
+def run_lint(linter, view):
     '''run a linter on a given view regardless of user setting'''
     vid = view.id()
     text = view.substr(sublime.Region(0, view.size()))
@@ -68,9 +98,18 @@ def select_linter(view):
             return LINTERS[language]
     return None
 
+def highlight_notes(view):
+    '''highlight user-specified notes in a file'''
+    view.erase_regions('user_notes')
+    text = view.substr(sublime.Region(0, view.size()))
+    
+    regions = LINTERS["user notes"].run(view, text)
+    if regions:
+        view.add_regions('user_notes', regions, "user.notes", 
+                                            sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 def queue_linter(view):
-    '''Put the current view in a QUEUE to be examined by a linter
+    '''Put the current view in a queue to be examined by a linter
        if it exists'''
     if select_linter(view) is None:
         erase_lint_marks(view)#may have changed file type and left marks behind
@@ -83,16 +122,15 @@ def background_linter():
        update the view after running the linter in a background thread
        so as to not slow down the UI too much.'''
     while True:
-        time.sleep(0.5)
+        time.sleep(INTERVAL)
         for vid in dict(QUEUE):
             _view = QUEUE[vid]
             def _update_view():
                 linter = select_linter(_view)
-                if linter:
-                    try:
-                        run(linter, _view)
-                    except RuntimeError, excp:
-                        print excp
+                try:
+                    run(linter, _view)
+                except RuntimeError, excp:
+                    print excp
             sublime.set_timeout(_update_view, 100)
             try: 
                 del QUEUE[vid]
@@ -106,6 +144,46 @@ if not '__active_linter_thread' in globals():
     __active_linter_thread = True
     thread.start_new_thread(background_linter, ())
 
+class Lint(sublime_plugin.TextCommand):
+    '''command to interact with linters'''
+    def run_(self, name):
+        '''method called by default via view.run_command; 
+           used to dispatch to appropriate method'''
+        if name is None:
+            self.help_()
+        try:
+            name = name.lower()
+        except AttributeError:
+            self.multiple_args(name)
+
+        if name == "help":
+            self.help()
+        else:
+            print "Unrecognized option"
+
+
+    @help_collector
+    def help_(self):
+        '''* view.run_command("lint"):
+           Displays information about how to use this plugin
+        '''
+        self.help()
+
+    @help_collector
+    def help(self):
+        '''* view.run_command("lint", "help"):
+           Displays information about how to use this plugin
+        '''
+        help_view = self.view.window().new_file()
+        help_view.set_name("SublimeLint help")
+        _id = help_view.buffer_id()
+        help_view.set_scratch(_id)
+        help_view.settings().set("gutter", False)
+        help_view.set_syntax_file("Packages/Markdown/Markdown.tmLanguage")
+        ed = help_view.begin_edit()
+        help_view.insert(ed, 0, '\n'.join(HELP))
+        help_view.end_edit(ed)
+        help_view.set_read_only(_id)
 
 class RunLinter(sublime_plugin.TextCommand):
     '''command to run a user-specified linter
@@ -114,7 +192,7 @@ class RunLinter(sublime_plugin.TextCommand):
         if self.view.settings().get('sublimelint'):
             self.view.settings().set('sublimelint', None)
         if name in LINTERS:
-            run_(LINTERS[name], self.view)
+            run_lint(LINTERS[name], self.view)
         else:
             print "unrecognized linter: %s" % name
 
@@ -134,6 +212,7 @@ class LinterOn(sublime_plugin.TextCommand):
     example: view.run_command("linter_on")'''
     def run_(self, arg):
         self.view.settings().set('sublimelint', True)
+        print arg
 
 
 class LinterOff(sublime_plugin.TextCommand):
