@@ -38,12 +38,8 @@ def find_all(text, string, view):
     while True:
         start = text.find(string, start)
         if start != -1:
-            name = view.scope_name(start)
             end = start + length
-            # Try to only include item in comments - including strings (Python)
-            if ((name.startswith("string") and "meta" not in name) 
-                or name.startswith("comment")):
-                found.append( sublime.Region(start, end) )
+            found.append( sublime.Region(start, end) )
             start = end
         else:
             break

@@ -150,11 +150,10 @@ def highlight_notes(view):
                                             sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 def queue_linter(view):
-    '''Put the current view in a queue to be examined by a linter
-       if it exists'''
+    '''Put the current view in a queue to be examined by a linter'''
     if select_linter(view) is None:
         erase_lint_marks(view)#may have changed file type and left marks behind
-        return
+    #user notes could be present in all types of files
     QUEUE[view.id()] = view
 
 
