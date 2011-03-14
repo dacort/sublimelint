@@ -300,7 +300,7 @@ class Annotations(Lint):
         '''method called by default via view.run_command; 
            used to dispatch to appropriate method'''
         if name is None:
-            self.help_()
+            self.extract_single()
             return
 
         try:
@@ -317,7 +317,11 @@ class Annotations(Lint):
             HELP.insert(0, UNRECOGNIZED % name)
             self.help()
             del HELP[0]
-
+    
+    def extract_single(self):
+        text = self.view.substr(sublime.Region(0, self.view.size()))
+        notes = LINTERS["annotations"].extract_all_lines(text, self.view)
+        annotations_view, _id = self.view_in_tab("Annotations: single_lines", notes)
 
 
 class BackgroundLinter(sublime_plugin.EventListener):

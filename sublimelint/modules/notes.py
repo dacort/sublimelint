@@ -19,14 +19,32 @@ description =\
 ''' % default_notes
 
 def run(code, view):
-    annotations = view.settings().get("annotations")
-    if annotations is None:
-        annotations = default_notes
+    '''linter method called by default'''
+    annotations = select_(view)
     
     regions = []
     for note in annotations:
         regions.extend(find_all(code, note, view))
     return regions
+
+def select_(view):
+    '''selects the list of annotations to use'''
+    annotations = view.settings().get("annotations")
+    if annotations is None:
+        return default_notes
+    else:
+        return annotations
+
+def extract_all_lines(code, view):
+    '''extract all lines with annotations'''
+    annotations = select_(view)
+    newlines = []
+    for line in code.split("\n"):
+        for note in annotations:
+            if line.find(note) != -1:
+                newlines.append(line)
+                break
+    return '\n'.join(newlines)
 
 def find_all(text, string, view):
     ''' finds all occurences of "string" in "text" and notes their positions
