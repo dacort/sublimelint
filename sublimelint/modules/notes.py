@@ -1,6 +1,6 @@
 '''notes.py
 
-Used to highlight user-defined "notes" such as TODO, README, etc., 
+Used to highlight user-defined "annotations" such as TODO, README, etc., 
 depending user choice.
 
 '''
@@ -8,9 +8,9 @@ import sublime
 
 
 default_notes = ["TODO", "README"]
-language = "user notes"
+language = "annotations"
 description =\
-'''* view.run_command("lint", "user notes")
+'''* view.run_command("lint", "annotations")
         Turns background linter off and highlight user notes.
 
         User notes are "words" that can be specified as a user preference named "my_notes".
@@ -19,12 +19,12 @@ description =\
 ''' % default_notes
 
 def run(code, view):
-    my_notes = view.settings().get("my_notes")
-    if my_notes is None:
-        my_notes = default_notes
+    annotations = view.settings().get("annotations")
+    if annotations is None:
+        annotations = default_notes
     
     regions = []
-    for note in my_notes:
+    for note in annotations:
         regions.extend(find_all(code, note, view))
     return regions
 

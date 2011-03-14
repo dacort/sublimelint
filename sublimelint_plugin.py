@@ -16,6 +16,10 @@ import sublime_plugin
 
 from sublimelint.loader import Loader
 
+# TODO: experiment with including non-ascii characters - the Python linter
+# apperently raises some exceptions and may stop because of that. 
+# If so, fix it!
+
 LINTERS = {} # mapping of language name to linter module
 QUEUE = {}     # views waiting to be processed by linter
 ERRORS = {} # error messages on given line obtained from linter; they are
@@ -30,7 +34,7 @@ HELP.insert(0,
 
 SublimeLint is a plugin intended to support "lint" programs, highlighting
 lines of code which are deemed to contain (potential) errors. It also
-supports highlighting special user notes (for example: TODO) so that they
+supports highlighting special annotations (for example: TODO) so that they
 can be quickly located.
 
 To enable a background linter to run by default 
@@ -52,7 +56,7 @@ The color used to outline lint errors is the invalid.illegal scope
 which should normally be defined in your default theme.
 
 
-Color: user notes
+Color: annotations
 ------------------
 
 The color used to outline lint errors is the invalid.illegal scope which
@@ -62,7 +66,7 @@ To customize the color used for highlighting user notes, add the following
 to your theme (adapting the color to your liking):
         <dict>
             <key>name</key>
-            <string>Sublimelint UserNotes</string>
+            <string>Sublimelint Annotations</string>
             <key>scope</key>
             <string>sublimelint.notes</string>
             <key>settings</key>
@@ -99,7 +103,7 @@ def background_run(linter, view):
 
 def run_once(linter, view):
     '''run a linter on a given view regardless of user setting'''
-    if linter == LINTERS["user notes"]:
+    if linter == LINTERS["annotations"]:
         highlight_notes(view)
         return
     vid = view.id()
@@ -140,20 +144,20 @@ def select_linter(view):
     return None
 
 def highlight_notes(view):
-    '''highlight user-specified notes in a file'''
-    view.erase_regions('user_notes')
+    '''highlight user-specified annotations in a file'''
+    view.erase_regions('annotations')
     text = view.substr(sublime.Region(0, view.size()))
     
-    regions = LINTERS["user notes"].run(text, view)
+    regions = LINTERS["annotations"].run(text, view)
     if regions:
-        view.add_regions('user_notes', regions, "sublimelint.notes", 
+        view.add_regions('annotations', regions, "sublimelint.annotations", 
                                             sublime.DRAW_EMPTY_AS_OVERWRITE)
 
 def queue_linter(view):
     '''Put the current view in a queue to be examined by a linter'''
     if select_linter(view) is None:
         erase_lint_marks(view)#may have changed file type and left marks behind
-    #user notes could be present in all types of files
+    #user annotations could be present in all types of files
     QUEUE[view.id()] = view
 
 
