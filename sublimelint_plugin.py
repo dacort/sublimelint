@@ -244,18 +244,23 @@ class Lint(sublime_plugin.TextCommand):
         '''* view.run_command("lint", "help"):
         Displays information about how to use this plugin
         '''
-        help_view = self.view.window().new_file()
-        help_view.set_name("SublimeLint help")
-        _id = help_view.buffer_id()
-        help_view.set_scratch(_id)
-        help_view.settings().set("gutter", True)
-        help_view.settings().set("line_numbers", False)
-        help_view.set_syntax_file("Packages/Markdown/Markdown.tmLanguage")
-        ed = help_view.begin_edit()
-        help_view.insert(ed, 0, '\n'.join(HELP))
-        help_view.end_edit(ed)
+        help_view, _id = self.view_in_tab("Sublime help", '\n'.join(HELP))
         help_view.set_read_only(_id)
-
+    
+    def view_in_tab(self, title, text):
+        '''Helper function to display information in a tab.
+        '''
+        tab = self.view.window().new_file()
+        tab.set_name(title)
+        _id = tab.buffer_id()
+        tab.set_scratch(_id)
+        tab.settings().set("gutter", True)
+        tab.settings().set("line_numbers", False)
+        tab.set_syntax_file("Packages/Markdown/Markdown.tmLanguage")
+        ed = tab.begin_edit()
+        tab.insert(ed, 0, text)
+        tab.end_edit(ed)
+        return tab, _id
     
     @help_collector
     def reset(self):
@@ -286,6 +291,32 @@ class Lint(sublime_plugin.TextCommand):
         if self.view.settings().get('sublimelint'):
             self.view.settings().set('sublimelint', None)
         run_once(LINTERS[name], self.view)
+
+class Annotations(Lint):
+    '''Commands to extract annotations and display them in
+       a file
+    '''
+    def run_(self, name):
+        '''method called by default via view.run_command; 
+           used to dispatch to appropriate method'''
+        if name is None:
+            self.help_()
+            return
+
+        try:
+            lc_name = name.lower()
+        except AttributeError:
+            HELP.insert(0, UNRECOGNIZED % name)
+            self.help()
+            del HELP[0]
+            return
+
+        if lc_name == "help":
+            self.help()
+        else:
+            HELP.insert(0, UNRECOGNIZED % name)
+            self.help()
+            del HELP[0]
 
 
 
