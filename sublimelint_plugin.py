@@ -17,7 +17,7 @@ import sublime_plugin
 from sublimelint.loader import Loader
 
 # TODO: experiment with including non-ascii characters - the Python linter
-# apperently raises some exceptions and may stop because of that. 
+# apparently raises some exceptions and may stop because of that. 
 # If so, fix it!
 
 LINTERS = {} # mapping of language name to linter module
@@ -244,10 +244,11 @@ class Lint(sublime_plugin.TextCommand):
         '''* view.run_command("lint", "help"):
         Displays information about how to use this plugin
         '''
-        help_view, _id = self.view_in_tab("Sublime help", '\n'.join(HELP))
+        help_view, _id = self.view_in_tab("Sublime help", '\n'.join(HELP),
+                                    "Packages/Markdown/Markdown.tmLanguage")
         help_view.set_read_only(_id)
     
-    def view_in_tab(self, title, text):
+    def view_in_tab(self, title, text, file_type):
         '''Helper function to display information in a tab.
         '''
         tab = self.view.window().new_file()
@@ -256,7 +257,7 @@ class Lint(sublime_plugin.TextCommand):
         tab.set_scratch(_id)
         tab.settings().set("gutter", True)
         tab.settings().set("line_numbers", False)
-        tab.set_syntax_file("Packages/Markdown/Markdown.tmLanguage")
+        tab.set_syntax_file(file_type)
         ed = tab.begin_edit()
         tab.insert(ed, 0, text)
         tab.end_edit(ed)
@@ -300,7 +301,7 @@ class Annotations(Lint):
         '''method called by default via view.run_command; 
            used to dispatch to appropriate method'''
         if name is None:
-            self.extract_single()
+            self.extract_from_current_view()
             return
 
         try:
@@ -318,10 +319,14 @@ class Annotations(Lint):
             self.help()
             del HELP[0]
     
-    def extract_single(self):
+    def extract_from_current_view(self):
         text = self.view.substr(sublime.Region(0, self.view.size()))
-        notes = LINTERS["annotations"].extract_all_lines(text, self.view)
-        annotations_view, _id = self.view_in_tab("Annotations: single_lines", notes)
+        filename = self.view.file_name()
+        notes = LINTERS["annotations"].extract_annotations(text, self.view, filename)
+        _, filename = os.path.split(filename)
+        annotations_view, _id = self.view_in_tab("Annotations from %s" % 
+                                                    filename, notes,
+                                                "Packages/sublime_orgmode/orgmode.tmLanguage")
 
 
 class BackgroundLinter(sublime_plugin.EventListener):

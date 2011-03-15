@@ -35,16 +35,33 @@ def select_(view):
     else:
         return annotations
 
-def extract_all_lines(code, view):
+def extract_annotations(code, view, filename):
     '''extract all lines with annotations'''
     annotations = select_(view)
-    newlines = []
-    for line in code.split("\n"):
-        for note in annotations:
-            if line.find(note) != -1:
-                newlines.append(line)
+    note_starts = []
+    for note in annotations:
+        start = 0
+        length = len(note)
+        while True:
+            start = code.find(note, start)
+            if start != -1:
+                end = start + length
+                note_starts.append(start)
+                start = end
+            else:
                 break
-    return '\n'.join(newlines)
+    regions_with_notes = set([])
+    for point in note_starts:
+        regions_with_notes.add(view.extract_scope(point))
+    regions_with_notes = sorted(list(regions_with_notes))
+    text = []
+    for region in regions_with_notes:
+        row, col = view.rowcol(region.begin())
+        text.append("[[%s:%s]]" % (filename, row+1))
+        text.append(view.substr(region))
+
+    return '\n'.join(text)
+    
 
 def find_all(text, string, view):
     ''' finds all occurences of "string" in "text" and notes their positions
